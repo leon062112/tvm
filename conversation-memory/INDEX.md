@@ -4,6 +4,9 @@
 
 | 时间 | 标题 | 文件 |
 | ---- | ---- | ---- |
+| 2026-09-09 | DSA 基线 survey + microbench(indexer 数字落地、dense decode 基线全断、H200 测试面) | baselines.md |
+| 2026-09-09 | DSA 形状集规格化(锚 Table 4 S5/S8 + H200 形状族) | shapes.md |
+| 2026-09-09 | DSA 在 tirx 上的逐步复现计划(H200 环境侦察、workload 定为 DSA、P0–P3 + T1/T2/T3 gate) | dsa-reproduction-plan.md |
 | 2026-09-04 | CAKE harness 在 tirx 上的卡点分析(空壳同步 verifier / 语料基质 / cost model 设计空间) | tirx-harness-gap.md |
 | 2026-09-04 | 用 tirx 复现 Cake IR 的可行性评估(逐构造映射 + 三卡点 + 路径) | tirx-cake-ir-feasibility.md |
 | 2026-09-04 | tirx ↔ CAKE 概念同构的代码级证据(file:line) | tirx-concept-isomorphism.md |

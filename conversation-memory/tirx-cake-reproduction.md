@@ -38,3 +38,7 @@
 
 - Cake IR 逐构造复现可行性评估(多数构造 ✅,layout 封装层 / WGMMA / cost model 三卡点)见 [[tirx-cake-ir-feasibility.md]];
 - harness 卡点分析(空壳同步 verifier、语料基质、cost model 设计空间与降级路径)见 [[tirx-harness-gap.md]]。
+
+## workload 变更(2026-09-09)
+
+- **workload 从 KDA prefill 改为 DSA**(DeepSeek sparse attention,用户定;理由见 [[dsa-reproduction-plan.md]] 决策记录)。硬件前提不变(H200/sm_90a),本文"目标与当前决策"中的 KDA 表述作废,以 DSA 计划为准。分层推进顺序与 gate 见 [[dsa-reproduction-plan.md]]。
