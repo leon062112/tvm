@@ -84,8 +84,9 @@
 - **P0.1 构建 ✅**:submodule init → cmake(USE_CUDA=ON)→ ninja(192 核 ~10min)→ `import tvm.tirx` 冒烟过(tvm 0.26.dev0)。**注意**:`tvm_ffi` 必须用 submodule 版(PYTHONPATH 首放 `3rdparty/tvm-ffi/python`),site-packages 里是旧版会 import 失败。
 - **P0.2 测试面 ✅**:2709 项可收集;**H200(cc9.0)上 tile_primitive CUDA 套件被 `has_cuda_compute(10)` 全 skip**;可跑且过 = 编译器侧 96 + operator 143 + codegen 154;**codegen 9 failed 全 PTX-dialect/tensor-map 侧,源码零改动 → 预存在,记 [待查] 不入关键路径**。
 - **P0.3 形状集 ✅**:[[shapes.md]]。
-- **P0.4 基线 ✅(部分降级)**:[[baselines.md]]。indexer(deep_gemm,sm90)数字落地;**dense MLA decode 四条候选基线全断**(flashinfer SM80-only、cutlass_mla_decode SM100-only、trtllm-gen 需拉 NVIDIA cubin、FlashMLA 被 gcc10.2 段错误卡死)→ 走回退(PyTorch oracle + 自建对拍);GEMM 基线 cuBLAS BF16 810 TFLOPS 落地供 P1。
-- **gate 结论:P0 通过,可进 P1(WGMMA substrate)**。dense decode 基线阻塞不挡 P1。
+- **P0.4 基线 ✅**:[[baselines.md]]。indexer(deep_gemm,sm90)数字落地;**dense + sparse MLA decode 基线 = FlashMLA(sgl_kernel 预编译版,绕过源码编译的 gcc 卡点)**——dense 数字已测,sparse `flash_mla_sparse_fwd` SM90 可用;GEMM 基线 cuBLAS BF16 810 TFLOPS 落地供 P1。
+- **gate 结论:P0 完整通过,基线齐备,可进 P1(WGMMA substrate)**。
+- **勘误**:先前"dense MLA decode 无可用 H200 基线"的判断作废——是源码编译路线断了,**sgl_kernel 已预编译 FlashMLA**,直接可用(详见 [[baselines.md]])。
 
 ## 台账指针
 

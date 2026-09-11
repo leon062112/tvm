@@ -27,18 +27,41 @@
 
 (单位 ms;小 batch 被 launch 常数主导 ≈0.023ms。target-verify: next_n=2 B=4 ctx=131K → 0.0431ms。)
 
-## 组件 B:dense MLA decode(中间门)
+## 组件 B:dense MLA decode(中间门)—— ✅ 基线 = FlashMLA(sgl_kernel 预编译版)
 
-**当前无可用 H200 基线**,三条路全断,逐一记录:
+**关键突破**:不需要源码编译 FlashMLA——**sgl_kernel 已随 sglang 0.5.4 预编译了 FlashMLA**(`sgl_kernel/flash_mla.py` + `flashmla_ops.abi3.so`),Hopper 原生、sm90 可用,绕过了 gcc10.2 编 CUTLASS segfault。
+
+- **API**:`sgl_kernel.flash_mla.flash_mla_with_kvcache`
+  - q `[B, seq, H, 576]`(kv_lora_rank 512 + qk_rope 64);k_cache `[num_pages, PAGE=64, 1, 576]`;block_table `[B, max_pages]`;cache_seqlens `[B]` int32;head_dim_v=512;metadata=`get_mla_metadata(seqlens, num_heads_q, 1)`;softmax_scale、causal=True;返回 out `[B,seq,H,512]`。
+- **已测数字(H200,page=64,H=128,D=576/512,bf16,causal)**:
+
+| batch | 1K | 4K | 16K | 64K |
+| --- | --- | --- | --- | --- |
+| 1 | 0.0383 | 0.0504 | 0.0740 | 0.0950 |
+| 2 | 0.0390 | 0.0467 | 0.0685 | 0.1047 |
+| 4 | 0.0360 | 0.0446 | 0.0693 | 0.1496 |
+| 16 | 0.0400 | 0.0619 | 0.1429 | 0.4526 |
+| 64 | 0.0531 | 0.1348 | 0.4683 | 1.7435 |
+| 128 | 0.0855 | 0.2448 | 0.9737 | 3.8132 |
+
+(单位 ms。→ P2.1 dense MLA decode 的 perf gate 即对标此表。)
+
+## 组件 C:sparse MLA decode(冲刺目标)—— ✅ 基线存在(修正此前"无公开基线"结论)
+
+sgl_kernel 同款 FlashMLA 含 sparse 路径,**SM90 上可用**:
+
+- **`flash_mla_sparse_fwd(q, kv, indices, sm_scale, d_v=512)`** — 文档:"sparse attention prefill kernel";q `[s_q, h_q, d_qk=576]` bf16、kv `[s_kv, h_kv=1, 576]` bf16、indices `[s_q, h_kv, topk]` int32(-1 或 ≥s_kv 为无效)。**实测 SM90 通过**(s_q=8,H=128,s_kv=8192,**topk 须为 128 的倍数**:128/512/2048 均 OK,返回 out `[s_q,128,512]`)。
+- **`flash_mla_with_kvcache(..., indices=..., is_fp8_kvcache=True)`** — sparse decode(paged)路径:SM90 上 **bf16 不支持**(`Sparse BF16 MLA is not supported on SM90`),**fp8 支持但布局受限**(`causal` 必须 false;q 须 bf16;fp8 k_cache 布局报 `kcache must have shape (num_blocks, page_block_size, num_heads_k, bytes_per_token)`,vllm 调用是 `kv.view(torch.uint8).unsqueeze(-2)` + dummy block_table——**精确 byte 布局待 P2 钉死**)。
+- **意义**:论文 S8 的"唯一失败行"在 H200 上**并非无基线可比**。P2.3 可对拍 `flash_mla_sparse_fwd`(bf16 语义/正确性)与 fp8 sparse decode(性能),让 T3 从"自比"升级为"对标公开实现"。
+
+### 已排除的候选(留档)
 
 | 候选 | 结果 | 阻塞 |
 | --- | --- | --- |
-| flashinfer 0.4.1 `BatchDecodeMlaWithPagedKVCacheWrapper` | ❌ | `MLA decode kernel is not supported on this GPU (SM90). Supported architecture: SM80.`(该构建只有 SM80 fallback) |
-| flashinfer `trtllm_batch_decode_with_kv_cache_mla` | ❌ | 需从 NVIDIA artifactory 下载 cubin(`edge.urm.nvidia.com` 超时失败)——网络环境限制 |
-| sgl_kernel `cutlass_mla_decode`(sglang 自带) | ❌ | **`cutlass_mla_decode is only supported on compute capability 10.0, but found sm version 90`** —— CUTLASS MLA decode 是 SM100-only,印证它用 tcgen05 |
-| DeepSeek FlashMLA(github 源码) | ❌ | sm100 需 NVCC 12.9(本机 12.8)→ `FLASH_MLA_DISABLE_SM100=1` 绕过;但 **gcc 10.2.1 编 CUTLASS 头 segfault(cc1plus)**;conda 装 gcc-13 因 channel URL 被代理剥冒号(`https//`)失败 |
-
-**结论:H200 上 dense MLA decode 无现成可用基线**。这正是 CAKE Table 4 S7(CUTLASS MLA decode)在论文里是 SM100-only 的侧写——CUTLASS MLA decode 上 Blackwell 才有,SM90 的 dense MLA 好基线实际是 FlashMLA,而它被 gcc 卡死。
+| flashinfer 0.4.1 `BatchDecodeMlaWithPagedKVCacheWrapper` | ❌ | `SM90 not supported; Supported architecture: SM80` |
+| flashinfer `trtllm_batch_decode_with_kv_cache_mla` | ❌ | 需拉 NVIDIA artifactory cubin(`edge.urm.nvidia.com` 超时) |
+| sgl_kernel `cutlass_mla_decode` | ❌ | **SM100-only**(`only supported on compute capability 10.0, found sm 90`)——印证 CUTLASS MLA 上 Blackwell 才有 |
+| DeepSeek FlashMLA 源码编译 | ❌ | sm100 需 NVCC≥12.9;且 **gcc 10.2.1 编 CUTLASS 头段错误**;conda 换 gcc 因代理剥 URL 冒号失败 → **改走 sgl_kernel 预编译版,已解决** |
 
 - **回退策略(P0.4 决策)**:dense decode 的**数值 oracle** 用 PyTorch 参考(DeepSeek modeling 级,允许);**perf 基线**优先 FlashMLA(gcc13 成功即补数字);若 gcc13 仍不行,用 flashinfer GQA 通用 decode(`BatchDecodeWithPagedKVCacheWrapper`)在相同 (B,SKV,heads) 上做量级参照(非 MLA 语义,仅校准 perf 数量级),并在 P2 以 tirx 自建 kernel 互相校验。
 - DSv3 MLA 参数(形状集锚):ckv=512、kpe=64、heads=128、page=64。
@@ -55,7 +78,8 @@
 ## P0 gate 判断
 
 - ✅ 构建 + 冒烟过;✅ indexer 基线数字落地;✅ 测试面摸底(下)。
-- ⚠️ dense decode 基线工具链阻塞,走回退,不阻塞进 P1(P1 是 WGMMA GEMM substrate,与 decode 基线无关)。
+- ✅ **组件 B(dense)+ C(sparse)基线均落地**:FlashMLA(sgl_kernel 预编译版)在 H200 可用,dense 数字已测;sparse 有 `flash_mla_sparse_fwd`(SM90 可用)。**此前"dense 基线全断"已通过绕过源码编译解决**。
+- 结论:P0 完整通过,基线齐备,可进 P1。
 
 ## H200 tirx 测试面(P0.2 摸底)
 

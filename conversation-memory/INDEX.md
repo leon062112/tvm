@@ -4,7 +4,9 @@
 
 | 时间 | 标题 | 文件 |
 | ---- | ---- | ---- |
-| 2026-09-09 | DSA 基线 survey + microbench(indexer 数字落地、dense decode 基线全断、H200 测试面) | baselines.md |
+| 2026-09-09 | H200 开发环境备忘(构建/运行/网络/基线栈/测试面缺口) | h200-env-notes.md |
+| 2026-09-09 | DSA 基线 P0.4 可复现 bench 脚本 + 原始数字 | bench/ |
+| 2026-09-09 | DSA 基线 survey + microbench(indexer + FlashMLA dense/sparse、H200 测试面) | baselines.md |
 | 2026-09-09 | DSA 形状集规格化(锚 Table 4 S5/S8 + H200 形状族) | shapes.md |
 | 2026-09-09 | DSA 在 tirx 上的逐步复现计划(H200 环境侦察、workload 定为 DSA、P0–P3 + T1/T2/T3 gate) | dsa-reproduction-plan.md |
 | 2026-09-04 | CAKE harness 在 tirx 上的卡点分析(空壳同步 verifier / 语料基质 / cost model 设计空间) | tirx-harness-gap.md |

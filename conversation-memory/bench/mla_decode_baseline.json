@@ -1,0 +1,122 @@
+[
+  {
+    "batch": 1,
+    "skv_tokens": 1024,
+    "ms": 0.0383
+  },
+  {
+    "batch": 1,
+    "skv_tokens": 4096,
+    "ms": 0.0504
+  },
+  {
+    "batch": 1,
+    "skv_tokens": 16384,
+    "ms": 0.074
+  },
+  {
+    "batch": 1,
+    "skv_tokens": 65536,
+    "ms": 0.095
+  },
+  {
+    "batch": 2,
+    "skv_tokens": 1024,
+    "ms": 0.039
+  },
+  {
+    "batch": 2,
+    "skv_tokens": 4096,
+    "ms": 0.0467
+  },
+  {
+    "batch": 2,
+    "skv_tokens": 16384,
+    "ms": 0.0685
+  },
+  {
+    "batch": 2,
+    "skv_tokens": 65536,
+    "ms": 0.1047
+  },
+  {
+    "batch": 4,
+    "skv_tokens": 1024,
+    "ms": 0.036
+  },
+  {
+    "batch": 4,
+    "skv_tokens": 4096,
+    "ms": 0.0446
+  },
+  {
+    "batch": 4,
+    "skv_tokens": 16384,
+    "ms": 0.0693
+  },
+  {
+    "batch": 4,
+    "skv_tokens": 65536,
+    "ms": 0.1496
+  },
+  {
+    "batch": 16,
+    "skv_tokens": 1024,
+    "ms": 0.04
+  },
+  {
+    "batch": 16,
+    "skv_tokens": 4096,
+    "ms": 0.0619
+  },
+  {
+    "batch": 16,
+    "skv_tokens": 16384,
+    "ms": 0.1429
+  },
+  {
+    "batch": 16,
+    "skv_tokens": 65536,
+    "ms": 0.4526
+  },
+  {
+    "batch": 64,
+    "skv_tokens": 1024,
+    "ms": 0.0531
+  },
+  {
+    "batch": 64,
+    "skv_tokens": 4096,
+    "ms": 0.1348
+  },
+  {
+    "batch": 64,
+    "skv_tokens": 16384,
+    "ms": 0.4683
+  },
+  {
+    "batch": 64,
+    "skv_tokens": 65536,
+    "ms": 1.7435
+  },
+  {
+    "batch": 128,
+    "skv_tokens": 1024,
+    "ms": 0.0855
+  },
+  {
+    "batch": 128,
+    "skv_tokens": 4096,
+    "ms": 0.2448
+  },
+  {
+    "batch": 128,
+    "skv_tokens": 16384,
+    "ms": 0.9737
+  },
+  {
+    "batch": 128,
+    "skv_tokens": 65536,
+    "ms": 3.8132
+  }
+]
