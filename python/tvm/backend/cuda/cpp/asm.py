@@ -181,7 +181,7 @@ device_intrinsic(
 
 @register_codegen("cuda_wgmma_noop_barrier")
 def codegen_cuda_wgmma_noop_barrier(reg):
-    dtype = str(reg.dtype)
+    dtype = str(reg.ty)
     dtype_enum = PTXDataType.from_string(dtype)
     if dtype_enum == PTXDataType.UINT32:
         op_name = "tirx.cuda_wgmma_noop_barrier_uint32"

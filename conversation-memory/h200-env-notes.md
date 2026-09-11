@@ -15,9 +15,14 @@
 ```bash
 git submodule update --init --recursive
 mkdir -p build && cp cmake/config.cmake build/config.cmake
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DUSE_CUDA=ON
-cmake --build build --parallel        # 192 核约 10 分钟
+# ⚠️ 必须直接改 build/config.cmake 里的 set(USE_CUDA OFF) -> ON
+sed -i 's/set(USE_CUDA OFF)/set(USE_CUDA ON)/' build/config.cmake
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build --parallel        # 192 核约 10 分钟(带 CUDA 首次)
 ```
+
+- **⚠️ 关键坑:`-DUSE_CUDA=ON` 无效!** `config.cmake` 里的 `set(USE_CUDA OFF)`(普通变量)会覆盖 cmake cache 变量 → 构建实际 `USE_CUDA OFF`(`TVMBuildOptions.txt` 可查),结果 `has_cuda()=False`、TVM 检测不到 GPU。**必须改 config.cmake 文件本身**。改后确认:`grep USE_CUDA build/TVMBuildOptions.txt` 应为 `ON`,且 `libtvm_runtime_cuda.so` 存在(注意 CUDA device API 在这个独立 .so 里,不在 `libtvm_runtime.so`)。
+- 验证:`python -c "from tvm.testing import env; print(env.has_cuda(), env._cuda_compute_version())"` 应为 `True (9, 0)`。
 
 - **tvm_ffi 必须用 submodule 版**:site-packages 里的旧版 import 会报 `cannot import name 'load_lib_ctypes'`。装法(非 editable,符合 AGENTS.md):
   `pip install --target=$(pwd)/.local/python $(pwd)/3rdparty/tvm-ffi`
@@ -32,6 +37,7 @@ cmake --build build --parallel        # 192 核约 10 分钟
 ## 测试面(H200 上有结构性缺口)
 
 - `tests/python/tirx/operator/tile_primitive/cuda/conftest.py` 用 `env.has_cuda_compute(10)` 把整个 CUDA tile-primitive 套件 **skip 到 cc≥10** → H200(cc9.0)上这些 GPU 测试**全部 skip**。
+- **同样地,`tests/python/tirx/codegen/conftest.py` 把所有 `gpu` 标记测试 skip 到 cc≥10** —— 所以 `test_codegen_hopper.py::test_wgmma_ss_nt`(自身门控是 cc==9.0)在 H200 上也被 skip。**绕法:写独立脚本直接跑,不经该 conftest**(见 `bench/wgmma_gemm_bf16.py`)。
 - 实测可跑:编译器侧(parser/printer/layout/exec_scope/verifier/transform)全过;`operator/` 143 passed / 1564 skipped;`codegen/` 154 passed / 320 skipped / **9 failed(PTX-dialect/tensor-map 侧,预存在,源码零改动)**。
 - 结论:**GPU kernel 正确性语料要靠自己积累**(从 P1 第一个 WGMMA 开始);这就是 [[tirx-harness-gap.md]] 卡点②的实证。
 

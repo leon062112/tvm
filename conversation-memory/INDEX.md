@@ -4,6 +4,7 @@
 
 | 时间 | 标题 | 文件 |
 | ---- | ---- | ---- |
+| 2026-09-11 | P1 进展:WGMMA substrate(recon、CUDA 构建修复、asm.py 修 bug、卡在 tensormap) | p1-wgmma-progress.md |
 | 2026-09-09 | H200 开发环境备忘(构建/运行/网络/基线栈/测试面缺口) | h200-env-notes.md |
 | 2026-09-09 | DSA 基线 P0.4 可复现 bench 脚本 + 原始数字 | bench/ |
 | 2026-09-09 | DSA 基线 survey + microbench(indexer + FlashMLA dense/sparse、H200 测试面) | baselines.md |
